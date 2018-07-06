@@ -253,21 +253,31 @@ impl<T> Sending<T> {
 				Err(e) => return Err(e),
 				Ok(AsyncSink::NotReady(item)) => {
 					self.items.push_front(item);
-					return Ok(Async::NotReady);
+					break;
 				}
-				Ok(AsyncSink::Ready) => { self.flushing = true; }
+				Ok(AsyncSink::Ready) => { 
+					// At least one item is buffered into the sink so we must ensure
+					// that at some point we will call `poll_complete`.
+					self.flushing = true; 
+				}
 			}
 		}
 
 		if self.flushing {
-			match sink.poll_complete() {
-				Err(e) => return Err(e),
-				Ok(Async::NotReady) => return Ok(Async::NotReady),
-				Ok(Async::Ready(())) => { self.flushing = false; }
+			if let Async::Ready(()) = sink.poll_complete()? {
+				self.flushing = false;
 			}
 		}
 
-		Ok(Async::Ready(()))
+		if self.items.is_empty() && !self.flushing {
+			// Return `Ready` only if all messages have been sent and flushed.
+			Ok(Async::Ready(()))
+		} else {
+			// If we are here then it means we were unable either
+			// - to buffer pending items or,
+			// - to flush the sink.
+			Ok(Async::NotReady)
+		}
 	}
 }
 
