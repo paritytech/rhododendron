@@ -1,0 +1,13 @@
+[package]
+name = "substrate-bft"
+version = "0.1.0"
+authors = ["Parity Technologies <admin@parity.io>"]
+
+[dependencies]
+futures = "0.1.17"
+error-chain = "0.12"
+log = "0.3"
+
+[dev-dependencies]
+tokio-core = "0.1.12"
+tokio-timer = "0.1.2"
