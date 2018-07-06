@@ -1,20 +1,39 @@
 // Copyright 2017 Parity Technologies (UK) Ltd.
-// This file is part of Substrate-BFT
+// This file is part of Rhododendron
 
-// Substrate-BFT is free software: you can redistribute it and/or modify
+// Rhododendron is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Substrate-BFT is distributed in the hope that it will be useful,
+// Rhododendron is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Substrate-BFT  If not, see <http://www.gnu.org/licenses/>.
+// along with Rhododendron  If not, see <http://www.gnu.org/licenses/>.
 
 //! BFT Agreement based on a rotating proposer in different rounds, generic futures-based implementation.
+//!
+//! Attempt to reach BFT agreement on a candidate. Not ready for production.
+//!
+//! Agreement is between `n` nodes, `max_faulty` of whom are faulty.
+//! `max_faulty` should be less than 1/3 of `nodes`, otherwise agreement may never be reached.
+//!
+//! Initiate agreement by calling `agree` with a generic `Context`, an input stream, and an
+//! output sink. The input should never logically conclude and contain messages from all other nodes,
+//! while the output sink 
+//!
+//! Note that it is possible to witness agreement being reached without ever
+//! seeing the candidate. Any candidates seen will be checked for validity.
+//!
+//! Although technically the agreement will always complete (given the eventual
+//! delivery of messages), in practice it is possible for this future to
+//! conclude without having witnessed the conclusion. 
+//!
+//! Users of the `Agreement` future should schedule it to be pre-empted 
+//! by an external import of an agreed value.
 
 #[cfg_attr(test, macro_use)]
 extern crate futures;
