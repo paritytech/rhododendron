@@ -243,7 +243,6 @@ impl<T> Sending<T> {
 
 	fn push(&mut self, item: T) {
 		self.items.push_back(item);
-		self.flushing = false;
 	}
 
 	// process all the sends into the sink.
