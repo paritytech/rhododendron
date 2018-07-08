@@ -243,31 +243,41 @@ impl<T> Sending<T> {
 
 	fn push(&mut self, item: T) {
 		self.items.push_back(item);
-		self.flushing = false;
 	}
 
 	// process all the sends into the sink.
 	fn process_all<S: Sink<SinkItem=T>>(&mut self, sink: &mut S) -> Poll<(), S::SinkError> {
-		while let Some(item) = self.items.pop_front() {
-			match sink.start_send(item) {
-				Err(e) => return Err(e),
-				Ok(AsyncSink::NotReady(item)) => {
-					self.items.push_front(item);
-					return Ok(Async::NotReady);
+		loop {
+			while let Some(item) = self.items.pop_front() {
+				match sink.start_send(item) {
+					Err(e) => return Err(e),
+					Ok(AsyncSink::NotReady(item)) => {
+						self.items.push_front(item);
+						break;
+					}
+					Ok(AsyncSink::Ready) => { 
+						// At least one item is buffered into the sink so we must ensure
+						// that at some point we will call `poll_complete`.
+						self.flushing = true; 
+					}
 				}
-				Ok(AsyncSink::Ready) => { self.flushing = true; }
+			}
+
+			if self.flushing {
+				if let Async::Ready(()) = sink.poll_complete()? {
+					self.flushing = false;
+				}
+			}
+
+			match (self.flushing, self.items.len()) {
+				// Still flushing, schedule to poll later.
+				(true, _) => return Ok(Async::NotReady),
+				// Return `Ready` only if all items have been sent and flushed.
+				(false, pending) if pending == 0 => return Ok(Async::Ready(())),
+				// Flushing is complete, however there are still pending items left.
+				(false, _) => continue,
 			}
 		}
-
-		if self.flushing {
-			match sink.poll_complete() {
-				Err(e) => return Err(e),
-				Ok(Async::NotReady) => return Ok(Async::NotReady),
-				Ok(Async::Ready(())) => { self.flushing = false; }
-			}
-		}
-
-		Ok(Async::Ready(()))
 	}
 }
 
