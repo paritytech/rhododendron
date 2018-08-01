@@ -203,6 +203,15 @@ impl Context for TestContext {
 			Box::new(timeout)
 		}
 	}
+
+	fn on_advance_round(
+		&self, 
+		propolsal: Option<&Candidate>, 
+		round: usize, 
+		next_round: usize,
+		reason: AdvanceRoundReason,
+	) {
+	}
 }
 
 fn timeout_in(t: Duration) -> oneshot::Receiver<()> {
@@ -413,7 +422,8 @@ fn threshold_plus_one_locked_on_proposal_only_one_with_candidate() {
 
 			agreement.strategy.advance_to_round(
 				&agreement.context,
-				locked_round + 1
+				locked_round + 1,
+				AdvanceRoundReason::WasBehind, // doesn't really matter for this test.
 			);
 
 			if i <= max_faulty {
