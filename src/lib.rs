@@ -159,6 +159,15 @@ impl<C, D, V, S> From<LocalizedVote<D, V, S>> for LocalizedMessage<C, D, V, S> {
 	}
 }
 
+/// A reason why we are advancing round.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AdvanceRoundReason {
+	/// We received enough `AdvanceRound` messages to advance to the next round.
+	Timeout,
+	/// We got enough `Prepare` messages for a future round to fast-forward to it.
+	WasBehind,
+}
+
 /// Context necessary for agreement.
 ///
 /// Provides necessary types for protocol messages, and functions necessary for a
@@ -206,6 +215,16 @@ pub trait Context {
 	/// length, and create a future that will resolve when the timeout is
 	/// concluded.
 	fn begin_round_timeout(&self, round: usize) -> Self::RoundTimeout;
+
+	/// This hook is called when we advance from current `round` to `next_round`. `propolsal` is 
+	/// `Some` if there was one on the current `round`.
+	fn on_advance_round(
+		&self, 
+		propolsal: Option<&Self::Candidate>, 
+		round: usize, 
+		next_round: usize,
+		reason: AdvanceRoundReason,
+	);
 }
 
 /// Communication that can occur between participants in consensus.
@@ -436,7 +455,7 @@ impl<C: Context> Strategy<C> {
 		if justification.round_number > self.current_round() {
 			// jump ahead to the prior round as this is an indication of a supermajority
 			// good nodes being at least on that round.
-			self.advance_to_round(context, justification.round_number);
+			self.advance_to_round(context, justification.round_number, AdvanceRoundReason::WasBehind);
 		}
 
 		let lock_to_new = self.locked.as_ref()
@@ -528,7 +547,7 @@ impl<C: Context> Strategy<C> {
 		};
 
 		if let Some(new_round) = advance {
-			self.advance_to_round(context, new_round);
+			self.advance_to_round(context, new_round, AdvanceRoundReason::Timeout);
 		}
 
 		Ok(Async::NotReady)
@@ -723,7 +742,7 @@ impl<C: Context> Strategy<C> {
 		Ok(())
 	}
 
-	fn advance_to_round(&mut self, context: &C, round: usize) {
+	fn advance_to_round(&mut self, context: &C, round: usize, reason: AdvanceRoundReason) {
 		assert!(round > self.current_round());
 		trace!(target: "bft", "advancing to round {}", round);
 
@@ -731,6 +750,14 @@ impl<C: Context> Strategy<C> {
 		self.evaluating_proposal = None;
 		self.round_timeout = context.begin_round_timeout(round).fuse();
 		self.local_state = LocalState::Start;
+
+		// notify the context that we are about to advance round.
+		context.on_advance_round(
+			self.current_accumulator.proposal(),
+			self.current_round(),
+			round,
+			reason,
+		);
 
 		// when advancing from a round, store away the witnessed proposal.
 		//
