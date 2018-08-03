@@ -206,10 +206,10 @@ impl Context for TestContext {
 
 	fn on_advance_round(
 		&self, 
-		propolsal: Option<&Candidate>, 
-		round: usize, 
-		next_round: usize,
-		reason: AdvanceRoundReason,
+		_proposal: Option<&Candidate>, 
+		_round: usize, 
+		_next_round: usize,
+		_reason: AdvanceRoundReason,
 	) {
 	}
 }
