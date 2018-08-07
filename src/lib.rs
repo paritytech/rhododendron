@@ -216,11 +216,11 @@ pub trait Context {
 	/// concluded.
 	fn begin_round_timeout(&self, round: usize) -> Self::RoundTimeout;
 
-	/// This hook is called when we advance from current `round` to `next_round`. `propolsal` is 
+	/// This hook is called when we advance from current `round` to `next_round`. `proposal` is
 	/// `Some` if there was one on the current `round`.
 	fn on_advance_round(
 		&self, 
-		propolsal: Option<&Self::Candidate>, 
+		proposal: Option<&Self::Candidate>,
 		round: usize, 
 		next_round: usize,
 		reason: AdvanceRoundReason,
