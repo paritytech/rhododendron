@@ -219,15 +219,15 @@ pub trait Context {
 	/// This hook is called when we advance from current `round` to `next_round`. `proposal` is
 	/// `Some` if there was one on the current `round`.
 	fn on_advance_round(
-		&self,
-		proposal: Option<&Self::Candidate>,
-		round: usize,
+		&self, 
+		accumulator: &Accumulator<Self::Candidate, Self::Digest, Self::AuthorityId, Self::Signature>,
+		round: usize, 
 		next_round: usize,
 		reason: AdvanceRoundReason,
 	) {
 		// The awkward let _ is used to suppress the unused variables
 		// warning (https://github.com/rust-lang/rust/issues/26487)
-		let _ = (proposal, round, next_round, reason);
+		let _ = (accumulator, round, next_round, reason);
 	}
 }
 
@@ -757,7 +757,7 @@ impl<C: Context> Strategy<C> {
 
 		// notify the context that we are about to advance round.
 		context.on_advance_round(
-			self.current_accumulator.proposal(),
+			&self.current_accumulator,
 			self.current_round(),
 			round,
 			reason,
