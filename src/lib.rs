@@ -227,7 +227,7 @@ pub trait Context {
 	) {
 		// The awkward let _ is used to suppress the unused variables
 		// warning (https://github.com/rust-lang/rust/issues/26487)
-		let _ = (proposal, round, next_round, reason);
+		let _ = (accumulator, round, next_round, reason);
 	}
 }
 
