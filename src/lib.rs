@@ -332,6 +332,8 @@ pub struct Committed<C, D, S> {
 	/// The candidate committed for. This will be unknown if
 	/// we never witnessed the proposal of the last round.
 	pub candidate: Option<C>,
+	/// The round number we saw the commit in.
+	pub round_number: usize,
 	/// A justification for the candidate.
 	pub justification: Justification<D, S>,
 }
@@ -542,6 +544,7 @@ impl<C: Context> Strategy<C> {
 
 				let committed = Committed {
 					candidate,
+					round_number: self.current_accumulator.round_number(),
 					justification: just.clone()
 				};
 
