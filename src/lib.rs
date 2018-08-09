@@ -220,7 +220,7 @@ pub trait Context {
 	/// `Some` if there was one on the current `round`.
 	fn on_advance_round(
 		&self, 
-		accumulator: Option<&Accumulator<Self::Candidate, Self::Digest, Self::AuthorityId, Self::Signature>>,
+		accumulator: &Accumulator<Self::Candidate, Self::Digest, Self::AuthorityId, Self::Signature>,
 		round: usize, 
 		next_round: usize,
 		reason: AdvanceRoundReason,
@@ -753,7 +753,7 @@ impl<C: Context> Strategy<C> {
 
 		// notify the context that we are about to advance round.
 		context.on_advance_round(
-			Some(&self.current_accumulator),
+			&self.current_accumulator,
 			self.current_round(),
 			round,
 			reason,

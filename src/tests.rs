@@ -206,7 +206,7 @@ impl Context for TestContext {
 
 	fn on_advance_round(
 		&self, 
-		_proposal: Option<&Accumulator<Self::Candidate, Self::Digest, Self::AuthorityId, Self::Signature>>,
+		_acc: &Accumulator<Self::Candidate, Self::Digest, Self::AuthorityId, Self::Signature>,
 		_round: usize, 
 		_next_round: usize,
 		_reason: AdvanceRoundReason,
