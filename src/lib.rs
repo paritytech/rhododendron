@@ -225,7 +225,9 @@ pub trait Context {
 		next_round: usize,
 		reason: AdvanceRoundReason,
 	) {
-		let _ = (proposal, round, next_round, reason); // The awkward let _ is required to suppress the unused variables warning (https://github.com/rust-lang/rust/issues/26487)
+		// The awkward let _ is used to suppress the unused variables
+		// warning (https://github.com/rust-lang/rust/issues/26487)
+		let _ = (proposal, round, next_round, reason);
 	}
 }
 
