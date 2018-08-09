@@ -4,6 +4,7 @@ version = "0.2.1"
 authors = ["Parity Technologies <admin@parity.io>"]
 description = "Asynchronously safe BFT protocol, futures-based implementation"
 license = "GPL-3.0"
+repository = "https://github.com/paritytech/rhododendron"
 
 [dependencies]
 futures = "0.1.17"

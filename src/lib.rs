@@ -23,16 +23,16 @@
 //!
 //! Initiate agreement by calling `agree` with a generic `Context`, an input stream, and an
 //! output sink. The input should never logically conclude and contain messages from all other nodes,
-//! while the output sink 
+//! while the output sink
 //!
 //! Note that it is possible to witness agreement being reached without ever
 //! seeing the candidate. Any candidates seen will be checked for validity.
 //!
 //! Although technically the agreement will always complete (given the eventual
 //! delivery of messages), in practice it is possible for this future to
-//! conclude without having witnessed the conclusion. 
+//! conclude without having witnessed the conclusion.
 //!
-//! Users of the `Agreement` future should schedule it to be pre-empted 
+//! Users of the `Agreement` future should schedule it to be pre-empted
 //! by an external import of an agreed value.
 
 #[cfg_attr(test, macro_use)]
@@ -224,7 +224,11 @@ pub trait Context {
 		round: usize, 
 		next_round: usize,
 		reason: AdvanceRoundReason,
-	);
+	) {
+		// The awkward let _ is used to suppress the unused variables
+		// warning (https://github.com/rust-lang/rust/issues/26487)
+		let _ = (proposal, round, next_round, reason);
+	}
 }
 
 /// Communication that can occur between participants in consensus.
@@ -274,10 +278,10 @@ impl<T> Sending<T> {
 						self.items.push_front(item);
 						break;
 					}
-					Ok(AsyncSink::Ready) => { 
+					Ok(AsyncSink::Ready) => {
 						// At least one item is buffered into the sink so we must ensure
 						// that at some point we will call `poll_complete`.
-						self.flushing = true; 
+						self.flushing = true;
 					}
 				}
 			}
