@@ -217,6 +217,21 @@ impl<Candidate, Digest, AuthorityId, Signature> Accumulator<Candidate, Digest, A
 		participants
 	}
 
+	/// Returns a HashSet of AuthorityIds we've seen voting at any step in this round.
+	/// Does not include those who we've only seen broadcast `AdvanceRound`.
+	pub fn voters(&self) -> HashSet<&AuthorityId> {
+		let mut participants = self.prepares.keys()
+			.chain(self.commits.keys())
+			.collect::<HashSet<&AuthorityId>>();
+
+		if self.proposal.is_some() {
+			// we only accepted the proposals, if they were made by the proposer
+			participants.insert(&self.round_proposer);
+		}
+
+		participants
+	}
+
 	/// Inspect the current consensus state.
 	pub fn state(&self) -> &State<Candidate, Digest, Signature> {
 		&self.state
