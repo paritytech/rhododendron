@@ -1,6 +1,6 @@
 [package]
 name = "rhododendron"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Parity Technologies <admin@parity.io>"]
 description = "Asynchronously safe BFT protocol, futures-based implementation"
 license = "GPL-3.0"

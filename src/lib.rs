@@ -875,6 +875,13 @@ impl<C: Context, I, O> Agreement<C, I, O> {
 	pub fn drain_misbehavior(&mut self) -> hash_map::Drain<C::AuthorityId, Misbehavior<C::Digest, C::Signature>> {
 		self.strategy.misbehavior.drain()
 	}
+
+	/// Fast-foward the round to the given number.
+	pub fn fast_forward(&mut self, round: usize) {
+		if round > self.strategy.current_round() {
+			self.strategy.advance_to_round(&self.context, round, AdvanceRoundReason::WasBehind);
+		}
+	}
 }
 
 /// Attempt to reach BFT agreement on a candidate.
