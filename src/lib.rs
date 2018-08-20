@@ -386,6 +386,7 @@ struct Strategy<C: Context> {
 	future_accumulators: BTreeMap<usize, Accumulator<C::Candidate, C::Digest, C::AuthorityId, C::Signature>>,
 	local_id: C::AuthorityId,
 	misbehavior: HashMap<C::AuthorityId, Misbehavior<C::Digest, C::Signature>>,
+	earliest_lock_round: usize,
 }
 
 impl<C: Context> Strategy<C> {
@@ -412,6 +413,7 @@ impl<C: Context> Strategy<C> {
 			round_timeout: timeout.fuse(),
 			local_id: context.local_id(),
 			misbehavior: HashMap::new(),
+			earliest_lock_round: 0,
 		}
 	}
 
@@ -464,10 +466,10 @@ impl<C: Context> Strategy<C> {
 			self.advance_to_round(context, justification.round_number, AdvanceRoundReason::WasBehind);
 		}
 
-		let lock_to_new = self.locked.as_ref()
-			.map_or(true, |l| l.justification.round_number < justification.round_number);
+		let lock_to_new = justification.round_number >= self.earliest_lock_round; 
 
 		if lock_to_new {
+			self.earliest_lock_round = justification.round_number;
 			self.locked = Some(Locked { justification })
 		}
 	}
@@ -645,15 +647,9 @@ impl<C: Context> Strategy<C> {
 
 			// vote to prepare only if we believe the candidate to be valid and
 			// we are not locked on some other candidate.
-			match self.locked {
-				Some(ref locked) if locked.digest() != &digest => {}
-				Some(_) => {
-					// don't check validity if we are locked.
-					// this is necessary to preserve the liveness property.
-					self.local_state = LocalState::Prepared(true);
-					prepare_for = Some(digest);
-				}
-				None => {
+			match &mut self.locked {
+				&mut Some(ref locked) if locked.digest() != &digest => {}
+				locked => {
 					let res = self.evaluating_proposal
 						.get_or_insert_with(|| context.proposal_valid(candidate))
 						.poll()?;
@@ -664,6 +660,16 @@ impl<C: Context> Strategy<C> {
 
 						if valid {
 							prepare_for = Some(digest);
+						} else {
+							// if the locked block is bad, unlock from it and
+							// refuse to lock to anything prior to it.
+							if locked.as_ref().map_or(false, |locked| locked.digest() == &digest) {
+								*locked = None;
+								self.earliest_lock_round = ::std::cmp::max(
+									self.current_accumulator.round_number(),
+									self.earliest_lock_round,
+								);
+							}
 						}
 					}
 				}
@@ -695,11 +701,20 @@ impl<C: Context> Strategy<C> {
 
 		let mut commit_for = None;
 
+		let thought_good = match self.local_state {
+			LocalState::Prepared(good) => good,
+			_ => true, // assume true.
+		};
+
 		if let &State::Prepared(ref p_just) = self.current_accumulator.state() {
 			// we are now locked to this prepare justification.
-			let digest = p_just.digest.clone();
-			self.locked = Some(Locked { justification: p_just.clone() });
-			commit_for = Some(digest);
+			// refuse to lock if the thing is bad.
+			self.earliest_lock_round = self.current_accumulator.round_number();
+			if thought_good {
+				let digest = p_just.digest.clone();
+				self.locked = Some(Locked { justification: p_just.clone() });
+				commit_for = Some(digest);
+			}
 		}
 
 		if let Some(digest) = commit_for {
@@ -880,6 +895,7 @@ impl<C: Context, I, O> Agreement<C, I, O> {
 	pub fn fast_forward(&mut self, round: usize) {
 		if round > self.strategy.current_round() {
 			self.strategy.advance_to_round(&self.context, round, AdvanceRoundReason::WasBehind);
+			self.strategy.earliest_lock_round = round;
 		}
 	}
 }

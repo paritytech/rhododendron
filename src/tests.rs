@@ -177,9 +177,7 @@ impl Context for TestContext {
 	}
 
 	fn proposal_valid(&self, proposal: &Candidate) -> FutureResult<bool, Error> {
-		if !self.evaluated.lock().unwrap().insert(proposal.0) {
-			panic!("Evaluated proposal {:?} twice", proposal.0);
-		}
+		self.evaluated.lock().unwrap().insert(proposal.0);
 
 		Ok(proposal.0 % 3 != 0).into_future()
 	}
@@ -383,6 +381,86 @@ fn threshold_plus_one_locked_on_proposal_only_one_with_candidate() {
 	let node_count = 10;
 	let max_faulty = 3;
 
+	let locked_proposal = Candidate(999_999_998);
+	let locked_digest = Digest(999_999_998);
+	let locked_round = 1;
+	let justification = UncheckedJustification {
+		round_number: locked_round,
+		digest: locked_digest.clone(),
+		signatures: (0..7)
+			.map(|i| Signature(Message::Vote(Vote::Prepare(locked_round, locked_digest.clone())), AuthorityId(i)))
+			.collect()
+	}.check(7, |_, _, s| Some(s.1.clone())).unwrap();
+
+	let timer = tokio_timer::wheel().tick_duration(ROUND_DURATION).build();
+
+	let (network, net_send, net_recv) = Network::new(node_count);
+	network.route_on_thread();
+
+	let nodes = net_send
+		.into_iter()
+		.zip(net_recv)
+		.enumerate()
+		.map(|(i, (tx, rx))| {
+			let ctx = TestContext {
+				local_id: AuthorityId(i),
+				proposal: Mutex::new(i),
+				current_round: Arc::new(AtomicUsize::new(locked_round + 1)),
+				timer: timer.clone(),
+				evaluated: Mutex::new(BTreeSet::new()),
+				node_count,
+			};
+			let mut agreement = agree(
+				ctx,
+				node_count,
+				max_faulty,
+				rx.map_err(|_| Error),
+				tx.sink_map_err(|_| Error).with(move |t| Ok((i, t))),
+			);
+
+			agreement.strategy.advance_to_round(
+				&agreement.context,
+				locked_round + 1,
+				AdvanceRoundReason::WasBehind, // doesn't really matter for this test.
+			);
+
+			if i >= max_faulty {
+				agreement.strategy.locked = Some(Locked {
+					justification: justification.clone(),
+				})
+			}
+
+			if i == max_faulty {
+				agreement.strategy.notable_candidates.insert(
+					locked_digest.clone(),
+					locked_proposal.clone(),
+				);
+			}
+
+			agreement
+		})
+		.collect::<Vec<_>>();
+
+	let timeout = timeout_in(Duration::from_millis(1000)).map_err(|_| Error);
+	let results = ::futures::future::join_all(nodes)
+		.map(Some)
+		.select(timeout.map(|_| None))
+		.wait()
+		.map(|(i, _)| i)
+		.map_err(|(e, _)| e)
+		.expect("to complete")
+		.expect("to not time out");
+
+	for result in &results {
+		assert_eq!(&result.justification.digest, &locked_digest);
+	}
+}
+
+#[test]
+fn threshold_plus_one_locked_on_bad_proposal() {
+	let node_count = 10;
+	let max_faulty = 3;
+
 	let locked_proposal = Candidate(999_999_999);
 	let locked_digest = Digest(999_999_999);
 	let locked_round = 1;
@@ -426,13 +504,11 @@ fn threshold_plus_one_locked_on_proposal_only_one_with_candidate() {
 				AdvanceRoundReason::WasBehind, // doesn't really matter for this test.
 			);
 
-			if i <= max_faulty {
+			if i >= max_faulty {
 				agreement.strategy.locked = Some(Locked {
 					justification: justification.clone(),
-				})
-			}
+				});
 
-			if i == max_faulty {
 				agreement.strategy.notable_candidates.insert(
 					locked_digest.clone(),
 					locked_proposal.clone(),
@@ -454,7 +530,7 @@ fn threshold_plus_one_locked_on_proposal_only_one_with_candidate() {
 		.expect("to not time out");
 
 	for result in &results {
-		assert_eq!(&result.justification.digest, &locked_digest);
+		assert!(&result.justification.digest != &locked_digest);
 	}
 }
 
@@ -498,7 +574,7 @@ fn consensus_completes_even_when_nodes_start_with_a_delay() {
 		})
 		.collect::<Vec<_>>();
 
-	let timeout = timeout_in(Duration::from_millis(750)).map_err(|_| Error);
+	let timeout = timeout_in(Duration::from_millis(7500)).map_err(|_| Error);
 	let results = ::futures::future::join_all(nodes)
 		.map(Some)
 		.select(timeout.map(|_| None))
