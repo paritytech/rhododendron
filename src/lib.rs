@@ -378,7 +378,7 @@ struct Strategy<C: Context> {
 	max_faulty: usize,
 	fetching_proposal: Option<C::CreateProposal>,
 	evaluating_proposal: Option<C::EvaluateProposal>,
-	round_timeout: future::Fuse<C::RoundTimeout>,
+	round_timeout: Option<future::Fuse<C::RoundTimeout>>,
 	local_state: LocalState,
 	locked: Option<Locked<C::Digest, C::Signature>>,
 	notable_candidates: HashMap<C::Digest, C::Candidate>,
@@ -391,7 +391,6 @@ struct Strategy<C: Context> {
 
 impl<C: Context> Strategy<C> {
 	fn create(context: &C, nodes: usize, max_faulty: usize) -> Self {
-		let timeout = context.begin_round_timeout(0);
 		let threshold = bft_threshold(nodes, max_faulty);
 
 		let current_accumulator = Accumulator::new(
@@ -410,7 +409,7 @@ impl<C: Context> Strategy<C> {
 			local_state: LocalState::Start,
 			locked: None,
 			notable_candidates: HashMap::new(),
-			round_timeout: timeout.fuse(),
+			round_timeout: None,
 			local_id: context.local_id(),
 			misbehavior: HashMap::new(),
 			earliest_lock_round: 0,
@@ -748,9 +747,12 @@ impl<C: Context> Strategy<C> {
 		}
 
 		// if the timeout has fired, vote to advance round.
-		if let Async::Ready(_) = self.round_timeout.poll()? {
-			attempt_advance = true;
-		}
+		let round_number = self.current_accumulator.round_number();
+		let timer_res = self.round_timeout
+			.get_or_insert_with(|| context.begin_round_timeout(round_number).fuse())
+			.poll()?;
+
+		if let Async::Ready(_) = timer_res { attempt_advance = true }
 
 		if attempt_advance {
 			let message = Vote::AdvanceRound(
@@ -770,7 +772,7 @@ impl<C: Context> Strategy<C> {
 
 		self.fetching_proposal = None;
 		self.evaluating_proposal = None;
-		self.round_timeout = context.begin_round_timeout(round).fuse();
+		self.round_timeout = None;
 		self.local_state = LocalState::Start;
 
 		// notify the context that we are about to advance round.
