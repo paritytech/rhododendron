@@ -198,6 +198,11 @@ impl<Candidate, Digest, AuthorityId, Signature> Accumulator<Candidate, Digest, A
 		self.round_number.clone()
 	}
 
+	/// Get the round proposer.
+	pub fn round_proposer(&self) -> AuthorityId {
+		self.round_proposer.clone()
+	}
+
 	pub fn proposal(&self) -> Option<&Candidate> {
 		self.proposal.as_ref().map(|p| &p.proposal)
 	}
