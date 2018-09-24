@@ -91,16 +91,16 @@ impl<T: Clone> Future for Network<T> {
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, Hash)]
 struct Candidate(usize);
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, Hash)]
 struct Digest(usize);
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, Hash)]
 struct AuthorityId(usize);
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode)]
 struct Signature(Message<Candidate, Digest>, AuthorityId);
 
 #[derive(Debug)]
