@@ -136,6 +136,7 @@ struct Proposal<Candidate, Digest, Signature> {
 
 /// Misbehavior which can occur.
 #[derive(Debug, Clone)]
+#[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub enum Misbehavior<Digest, Signature> {
 	/// Proposed out-of-turn.
 	ProposeOutOfTurn(usize, Digest, Signature),
