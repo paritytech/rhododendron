@@ -44,6 +44,12 @@ extern crate log;
 #[cfg(test)]
 extern crate tokio_timer;
 
+#[cfg(any(test, feature="codec"))]
+extern crate parity_codec as codec;
+#[cfg(any(test, feature="codec"))]
+#[macro_use]
+extern crate parity_codec_derive;
+
 use std::collections::{HashMap, BTreeMap, VecDeque};
 use std::collections::hash_map;
 use std::fmt::Debug;
@@ -62,6 +68,7 @@ mod tests;
 
 /// Votes during a round.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub enum Vote<D> {
 	/// Prepare to vote for proposal with digest D.
 	Prepare(usize, D),
@@ -85,6 +92,7 @@ impl<D> Vote<D> {
 /// Messages over the proposal.
 /// Each message carries an associated round number.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub enum Message<C, D> {
 	/// A proposal itself.
 	Propose(usize, C),
@@ -100,6 +108,7 @@ impl<C, D> From<Vote<D>> for Message<C, D> {
 
 /// A localized proposal message. Contains two signed pieces of data.
 #[derive(Debug, Clone)]
+#[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub struct LocalizedProposal<C, D, V, S> {
 	/// The round number.
 	pub round_number: usize,
@@ -117,6 +126,7 @@ pub struct LocalizedProposal<C, D, V, S> {
 
 /// A localized vote message, including the sender.
 #[derive(Debug, Clone)]
+#[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub struct LocalizedVote<D, V, S> {
 	/// The message sent.
 	pub vote: Vote<D>,
@@ -128,6 +138,7 @@ pub struct LocalizedVote<D, V, S> {
 
 /// A localized message.
 #[derive(Debug, Clone)]
+#[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub enum LocalizedMessage<C, D, V, S> {
 	/// A proposal.
 	Propose(LocalizedProposal<C, D, V, S>),
@@ -161,6 +172,7 @@ impl<C, D, V, S> From<LocalizedVote<D, V, S>> for LocalizedMessage<C, D, V, S> {
 
 /// A reason why we are advancing round.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub enum AdvanceRoundReason {
 	/// We received enough `AdvanceRound` messages to advance to the next round.
 	Timeout,
@@ -233,6 +245,7 @@ pub trait Context {
 
 /// Communication that can occur between participants in consensus.
 #[derive(Debug, Clone)]
+#[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub enum Communication<C, D, V, S> {
 	/// A consensus message (proposal or vote)
 	Consensus(LocalizedMessage<C, D, V, S>),
@@ -328,6 +341,7 @@ fn bft_threshold(nodes: usize, max_faulty: usize) -> usize {
 
 /// Committed successfully.
 #[derive(Debug, Clone)]
+#[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub struct Committed<C, D, S> {
 	/// The candidate committed for. This will be unknown if
 	/// we never witnessed the proposal of the last round.

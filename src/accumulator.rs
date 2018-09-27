@@ -24,6 +24,7 @@ use ::{Vote, LocalizedMessage, LocalizedProposal};
 
 /// Justification for some state at a given round.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub struct UncheckedJustification<D, S> {
 	/// The round.
 	pub round_number: usize,
@@ -81,6 +82,7 @@ impl<D, S> UncheckedJustification<D, S> {
 
 /// A checked justification.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub struct Justification<D,S>(UncheckedJustification<D,S>);
 
 impl<D, S> Justification<D, S> {
@@ -103,6 +105,7 @@ pub type PrepareJustification<D, S> = Justification<D, S>;
 
 /// The round's state, based on imported messages.
 #[derive(PartialEq, Eq, Debug)]
+#[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub enum State<Candidate, Digest, Signature> {
 	/// No proposal yet.
 	Begin,
@@ -117,12 +120,14 @@ pub enum State<Candidate, Digest, Signature> {
 }
 
 #[derive(Debug, Default)]
+#[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 struct VoteCounts {
 	prepared: usize,
 	committed: usize,
 }
 
 #[derive(Debug)]
+#[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 struct Proposal<Candidate, Digest, Signature> {
 	proposal: Candidate,
 	digest: Digest,
@@ -131,6 +136,7 @@ struct Proposal<Candidate, Digest, Signature> {
 
 /// Misbehavior which can occur.
 #[derive(Debug, Clone)]
+#[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub enum Misbehavior<Digest, Signature> {
 	/// Proposed out-of-turn.
 	ProposeOutOfTurn(usize, Digest, Signature),
@@ -448,16 +454,16 @@ mod tests {
 	use super::*;
 	use ::{LocalizedMessage, LocalizedProposal, LocalizedVote};
 
-	#[derive(Clone, PartialEq, Eq, Debug)]
+	#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode)]
 	pub struct Candidate(usize);
 
-	#[derive(Hash, PartialEq, Eq, Clone, Debug)]
+	#[derive(Hash, PartialEq, Eq, Clone, Debug, Encode, Decode)]
 	pub struct Digest(usize);
 
-	#[derive(Hash, PartialEq, Eq, Debug, Clone)]
+	#[derive(Hash, PartialEq, Eq, Debug, Encode, Decode, Clone)]
 	pub struct AuthorityId(usize);
 
-	#[derive(PartialEq, Eq, Clone, Debug)]
+	#[derive(PartialEq, Eq, Clone, Debug, Encode, Decode)]
 	pub struct Signature(usize, usize);
 
 	#[test]
