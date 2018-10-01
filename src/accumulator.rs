@@ -161,9 +161,9 @@ pub struct Accumulator<Candidate, Digest, AuthorityId, Signature>
 	AuthorityId: Hash + Eq + Clone,
 	Signature: Eq + Clone,
 {
-	round_number: usize,
-	threshold: usize,
-	round_proposer: AuthorityId,
+	pub round_number: usize,
+	pub threshold: usize,
+	pub round_proposer: AuthorityId,
 	proposal: Option<Proposal<Candidate, Digest, Signature>>,
 	prepares: HashMap<AuthorityId, (Digest, Signature)>,
 	commits: HashMap<AuthorityId, (Digest, Signature)>,
