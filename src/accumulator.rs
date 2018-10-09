@@ -161,9 +161,15 @@ pub struct Accumulator<Candidate, Digest, AuthorityId, Signature>
 	AuthorityId: Hash + Eq + Clone,
 	Signature: Eq + Clone,
 {
+	// The round this accumulator is currently on
 	pub round_number: usize,
+
+	// Threshold of prepare messages required to make progress
 	pub threshold: usize,
+
+	// Current proposer/authority for this round
 	pub round_proposer: AuthorityId,
+
 	proposal: Option<Proposal<Candidate, Digest, Signature>>,
 	prepares: HashMap<AuthorityId, (Digest, Signature)>,
 	commits: HashMap<AuthorityId, (Digest, Signature)>,
