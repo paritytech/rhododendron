@@ -71,16 +71,16 @@ mod tests;
 #[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub enum Vote<D> {
 	/// Prepare to vote for proposal with digest D.
-	Prepare(usize, D),
+	Prepare(u32, D),
 	/// Commit to proposal with digest D..
-	Commit(usize, D),
+	Commit(u32, D),
 	/// Propose advancement to a new round.
-	AdvanceRound(usize),
+	AdvanceRound(u32),
 }
 
 impl<D> Vote<D> {
 	/// Extract the round number.
-	pub fn round_number(&self) -> usize {
+	pub fn round_number(&self) -> u32 {
 		match *self {
 			Vote::Prepare(round, _) => round,
 			Vote::Commit(round, _) => round,
@@ -95,7 +95,7 @@ impl<D> Vote<D> {
 #[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub enum Message<C, D> {
 	/// A proposal itself.
-	Propose(usize, C),
+	Propose(u32, C),
 	/// A vote of some kind, localized to a round number.
 	Vote(Vote<D>),
 }
@@ -111,7 +111,7 @@ impl<C, D> From<Vote<D>> for Message<C, D> {
 #[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub struct LocalizedProposal<C, D, V, S> {
 	/// The round number.
-	pub round_number: usize,
+	pub round_number: u32,
 	/// The proposal sent.
 	pub proposal: C,
 	/// The digest of the proposal.
@@ -156,7 +156,7 @@ impl<C, D, V, S> LocalizedMessage<C, D, V, S> {
 	}
 
 	/// Extract the round number.
-	pub fn round_number(&self) -> usize {
+	pub fn round_number(&self) -> u32 {
 		match *self {
 			LocalizedMessage::Propose(ref proposal) => proposal.round_number,
 			LocalizedMessage::Vote(ref vote) => vote.vote.round_number(),
@@ -218,7 +218,7 @@ pub trait Context {
 		-> LocalizedMessage<Self::Candidate, Self::Digest, Self::AuthorityId, Self::Signature>;
 
 	/// Get the proposer for a given round of consensus.
-	fn round_proposer(&self, round: usize) -> Self::AuthorityId;
+	fn round_proposer(&self, round: u32) -> Self::AuthorityId;
 
 	/// Whether the proposal is valid.
 	fn proposal_valid(&self, proposal: &Self::Candidate) -> Self::EvaluateProposal;
@@ -226,15 +226,15 @@ pub trait Context {
 	/// Create a round timeout. The context will determine the correct timeout
 	/// length, and create a future that will resolve when the timeout is
 	/// concluded.
-	fn begin_round_timeout(&self, round: usize) -> Self::RoundTimeout;
+	fn begin_round_timeout(&self, round: u32) -> Self::RoundTimeout;
 
 	/// This hook is called when we advance from current `round` to `next_round`. `proposal` is
 	/// `Some` if there was one on the current `round`.
 	fn on_advance_round(
 		&self, 
 		accumulator: &Accumulator<Self::Candidate, Self::Digest, Self::AuthorityId, Self::Signature>,
-		round: usize, 
-		next_round: usize,
+		round: u32, 
+		next_round: u32,
 		reason: AdvanceRoundReason,
 	) {
 		// The awkward let _ is used to suppress the unused variables
@@ -347,7 +347,7 @@ pub struct Committed<C, D, S> {
 	/// we never witnessed the proposal of the last round.
 	pub candidate: Option<C>,
 	/// The round number we saw the commit in.
-	pub round_number: usize,
+	pub round_number: u32,
 	/// A justification for the candidate.
 	pub justification: Justification<D, S>,
 }
@@ -397,10 +397,10 @@ struct Strategy<C: Context> {
 	locked: Option<Locked<C::Digest, C::Signature>>,
 	notable_candidates: HashMap<C::Digest, C::Candidate>,
 	current_accumulator: Accumulator<C::Candidate, C::Digest, C::AuthorityId, C::Signature>,
-	future_accumulators: BTreeMap<usize, Accumulator<C::Candidate, C::Digest, C::AuthorityId, C::Signature>>,
+	future_accumulators: BTreeMap<u32, Accumulator<C::Candidate, C::Digest, C::AuthorityId, C::Signature>>,
 	local_id: C::AuthorityId,
 	misbehavior: HashMap<C::AuthorityId, Misbehavior<C::Digest, C::Signature>>,
-	earliest_lock_round: usize,
+	earliest_lock_round: u32,
 }
 
 impl<C: Context> Strategy<C> {
@@ -430,7 +430,7 @@ impl<C: Context> Strategy<C> {
 		}
 	}
 
-	fn current_round(&self) -> usize {
+	fn current_round(&self) -> u32 {
 		self.current_accumulator.round_number()
 	}
 
@@ -780,7 +780,7 @@ impl<C: Context> Strategy<C> {
 		Ok(())
 	}
 
-	fn advance_to_round(&mut self, context: &C, round: usize, reason: AdvanceRoundReason) {
+	fn advance_to_round(&mut self, context: &C, round: u32, reason: AdvanceRoundReason) {
 		assert!(round > self.current_round());
 		trace!(target: "bft", "advancing to round {}", round);
 
@@ -908,7 +908,7 @@ impl<C: Context, I, O> Agreement<C, I, O> {
 	}
 
 	/// Fast-foward the round to the given number.
-	pub fn fast_forward(&mut self, round: usize) {
+	pub fn fast_forward(&mut self, round: u32) {
 		if round > self.strategy.current_round() {
 			self.strategy.advance_to_round(&self.context, round, AdvanceRoundReason::WasBehind);
 			self.strategy.earliest_lock_round = round;
