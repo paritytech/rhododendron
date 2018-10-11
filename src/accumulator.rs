@@ -27,7 +27,7 @@ use ::{Vote, LocalizedMessage, LocalizedProposal};
 #[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub struct UncheckedJustification<D, S> {
 	/// The round.
-	pub round_number: usize,
+	pub round_number: u32,
 	/// The digest prepared for.
 	pub digest: D,
 	/// Signatures for the prepare messages.
@@ -48,7 +48,7 @@ impl<D, S> UncheckedJustification<D, S> {
 	pub fn check<F, V>(self, threshold: usize, mut check_message: F)
 		-> Result<Justification<D, S>, Self>
 		where
-			F: FnMut(usize, &D, &S) -> Option<V>,
+			F: FnMut(u32, &D, &S) -> Option<V>,
 			V: Hash + Eq,
 	{
 		let checks_out = {
@@ -139,13 +139,13 @@ struct Proposal<Candidate, Digest, Signature> {
 #[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 pub enum Misbehavior<Digest, Signature> {
 	/// Proposed out-of-turn.
-	ProposeOutOfTurn(usize, Digest, Signature),
+	ProposeOutOfTurn(u32, Digest, Signature),
 	/// Issued two conflicting proposals.
-	DoublePropose(usize, (Digest, Signature), (Digest, Signature)),
+	DoublePropose(u32, (Digest, Signature), (Digest, Signature)),
 	/// Issued two conflicting prepare messages.
-	DoublePrepare(usize, (Digest, Signature), (Digest, Signature)),
+	DoublePrepare(u32, (Digest, Signature), (Digest, Signature)),
 	/// Issued two conflicting commit messages.
-	DoubleCommit(usize, (Digest, Signature), (Digest, Signature)),
+	DoubleCommit(u32, (Digest, Signature), (Digest, Signature)),
 }
 
 /// Accumulates messages for a given round of BFT consensus.
@@ -162,7 +162,7 @@ pub struct Accumulator<Candidate, Digest, AuthorityId, Signature>
 	Signature: Eq + Clone,
 {
 	/// The round this accumulator is currently on
-	pub round_number: usize,
+	pub round_number: u32,
 
 	/// Threshold of prepare messages required to make progress
 	pub threshold: usize,
@@ -186,7 +186,7 @@ impl<Candidate, Digest, AuthorityId, Signature> Accumulator<Candidate, Digest, A
 	Signature: Eq + Clone,
 {
 	/// Create a new state accumulator.
-	pub fn new(round_number: usize, threshold: usize, round_proposer: AuthorityId) -> Self {
+	pub fn new(round_number: u32, threshold: usize, round_proposer: AuthorityId) -> Self {
 		Accumulator {
 			round_number,
 			threshold,
@@ -206,7 +206,7 @@ impl<Candidate, Digest, AuthorityId, Signature> Accumulator<Candidate, Digest, A
 	}
 
 	/// Get the round number.
-	pub fn round_number(&self) -> usize {
+	pub fn round_number(&self) -> u32 {
 		self.round_number.clone()
 	}
 

@@ -172,8 +172,8 @@ impl Context for TestContext {
 		}
 	}
 
-	fn round_proposer(&self, round: usize) -> AuthorityId {
-		AuthorityId(round % self.node_count)
+	fn round_proposer(&self, round: u32) -> AuthorityId {
+		AuthorityId((round as usize) % self.node_count)
 	}
 
 	fn proposal_valid(&self, proposal: &Candidate) -> FutureResult<bool, Error> {
@@ -182,8 +182,8 @@ impl Context for TestContext {
 		Ok(proposal.0 % 3 != 0).into_future()
 	}
 
-	fn begin_round_timeout(&self, round: usize) -> Self::RoundTimeout {
-		if round < self.current_round.load(Ordering::SeqCst) {
+	fn begin_round_timeout(&self, round: u32) -> Self::RoundTimeout {
+		if (round as usize) < self.current_round.load(Ordering::SeqCst) {
 			Box::new(Ok(()).into_future())
 		} else {
 			let mut round_duration = ROUND_DURATION;
@@ -194,7 +194,7 @@ impl Context for TestContext {
 			let current_round = self.current_round.clone();
 			let timeout = self.timer.sleep(round_duration)
 				.map(move |_| {
-					current_round.compare_and_swap(round, round + 1, Ordering::SeqCst);
+					current_round.compare_and_swap(round as usize, round as usize + 1, Ordering::SeqCst);
 				})
 				.map_err(|_| Error);
 
@@ -205,8 +205,8 @@ impl Context for TestContext {
 	fn on_advance_round(
 		&self, 
 		_acc: &Accumulator<Self::Candidate, Self::Digest, Self::AuthorityId, Self::Signature>,
-		_round: usize, 
-		_next_round: usize,
+		_round: u32, 
+		_next_round: u32,
 		_reason: AdvanceRoundReason,
 	) {
 	}
@@ -405,7 +405,7 @@ fn threshold_plus_one_locked_on_proposal_only_one_with_candidate() {
 			let ctx = TestContext {
 				local_id: AuthorityId(i),
 				proposal: Mutex::new(i),
-				current_round: Arc::new(AtomicUsize::new(locked_round + 1)),
+				current_round: Arc::new(AtomicUsize::new(locked_round as usize + 1)),
 				timer: timer.clone(),
 				evaluated: Mutex::new(BTreeSet::new()),
 				node_count,
@@ -485,7 +485,7 @@ fn threshold_plus_one_locked_on_bad_proposal() {
 			let ctx = TestContext {
 				local_id: AuthorityId(i),
 				proposal: Mutex::new(i),
-				current_round: Arc::new(AtomicUsize::new(locked_round + 1)),
+				current_round: Arc::new(AtomicUsize::new(locked_round as usize + 1)),
 				timer: timer.clone(),
 				evaluated: Mutex::new(BTreeSet::new()),
 				node_count,
