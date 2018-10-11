@@ -61,7 +61,7 @@ use self::accumulator::State;
 
 pub use self::accumulator::{Accumulator, Justification, PrepareJustification, UncheckedJustification, Misbehavior};
 
-mod accumulator;
+pub mod accumulator;
 
 #[cfg(test)]
 mod tests;
