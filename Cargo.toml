@@ -9,7 +9,7 @@ repository = "https://github.com/paritytech/rhododendron"
 [dependencies]
 futures = "0.1.17"
 error-chain = "0.12"
-log = "0.3"
+log = "0.4"
 parity-codec = { version = "3.0", optional = true }
 parity-codec-derive = { version = "3.0", optional = true }
 
