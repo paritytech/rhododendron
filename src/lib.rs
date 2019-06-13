@@ -35,27 +35,15 @@
 //! Users of the `Agreement` future should schedule it to be pre-empted
 //! by an external import of an agreed value.
 
-#[cfg_attr(test, macro_use)]
-extern crate futures;
-
-#[macro_use]
-extern crate log;
-
-#[cfg(test)]
-extern crate tokio_timer;
-
-#[cfg(any(test, feature="codec"))]
-extern crate parity_codec as codec;
-#[cfg(any(test, feature="codec"))]
-#[macro_use]
-extern crate parity_codec_derive;
-
 use std::collections::{HashMap, BTreeMap, VecDeque};
 use std::collections::hash_map;
 use std::fmt::Debug;
 use std::hash::Hash;
 
 use futures::{future, Future, Stream, Sink, Poll, Async, AsyncSink};
+use log::trace;
+#[cfg(any(test, feature="codec"))]
+use parity_codec::{Encode, Decode};
 
 use self::accumulator::State;
 
@@ -448,7 +436,7 @@ impl<C: Context> Strategy<C> {
 		} else if round_number > current_round {
 			let threshold = bft_threshold(self.nodes, self.max_faulty);
 
-			let mut future_acc = self.future_accumulators.entry(round_number).or_insert_with(|| {
+			let future_acc = self.future_accumulators.entry(round_number).or_insert_with(|| {
 				Accumulator::new(
 					round_number,
 					threshold,

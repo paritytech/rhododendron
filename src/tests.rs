@@ -23,6 +23,7 @@ use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
+use futures::try_ready;
 use futures::prelude::*;
 use futures::sync::{oneshot, mpsc};
 use futures::future::FutureResult;
@@ -92,13 +93,13 @@ impl<T: Clone> Future for Network<T> {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, Hash)]
-struct Candidate(usize);
+struct Candidate(u64);
 
 #[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, Hash)]
-struct Digest(usize);
+struct Digest(u64);
 
 #[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, Hash)]
-struct AuthorityId(usize);
+struct AuthorityId(u64);
 
 #[derive(Debug, PartialEq, Eq, Clone, Encode, Decode)]
 struct Signature(Message<Candidate, Digest>, AuthorityId);
@@ -118,7 +119,7 @@ struct TestContext {
 	node_count: usize,
 	current_round: Arc<AtomicUsize>,
 	timer: Timer,
-	evaluated: Mutex<BTreeSet<usize>>,
+	evaluated: Mutex<BTreeSet<u64>>,
 }
 
 impl Context for TestContext {
@@ -140,7 +141,7 @@ impl Context for TestContext {
 			let mut p = self.proposal.lock().unwrap();
 			let x = *p;
 			*p += self.node_count;
-			x
+			x as u64
 		};
 
 		Ok(Candidate(proposal)).into_future()
@@ -173,7 +174,7 @@ impl Context for TestContext {
 	}
 
 	fn round_proposer(&self, round: u32) -> AuthorityId {
-		AuthorityId((round as usize) % self.node_count)
+		AuthorityId((round as u64) % self.node_count as u64)
 	}
 
 	fn proposal_valid(&self, proposal: &Candidate) -> FutureResult<bool, Error> {
@@ -239,7 +240,7 @@ fn consensus_completes_with_minimum_good() {
 		.enumerate()
 		.map(|(i, (tx, rx))| {
 			let ctx = TestContext {
-				local_id: AuthorityId(i),
+				local_id: AuthorityId(i as u64),
 				proposal: Mutex::new(i),
 				current_round: Arc::new(AtomicUsize::new(0)),
 				timer: timer.clone(),
@@ -296,7 +297,7 @@ fn consensus_completes_with_minimum_good_all_initial_proposals_bad() {
 			};
 
 			let ctx = TestContext {
-				local_id: AuthorityId(i),
+				local_id: AuthorityId(i as u64),
 				proposal: Mutex::new(proposal),
 				current_round: Arc::new(AtomicUsize::new(0)),
 				timer: timer.clone(),
@@ -346,7 +347,7 @@ fn consensus_does_not_complete_without_enough_nodes() {
 		.enumerate()
 		.map(|(i, (tx, rx))| {
 			let ctx = TestContext {
-				local_id: AuthorityId(i),
+				local_id: AuthorityId(i as u64),
 				proposal: Mutex::new(i),
 				current_round: Arc::new(AtomicUsize::new(0)),
 				timer: timer.clone(),
@@ -403,7 +404,7 @@ fn threshold_plus_one_locked_on_proposal_only_one_with_candidate() {
 		.enumerate()
 		.map(|(i, (tx, rx))| {
 			let ctx = TestContext {
-				local_id: AuthorityId(i),
+				local_id: AuthorityId(i as u64),
 				proposal: Mutex::new(i),
 				current_round: Arc::new(AtomicUsize::new(locked_round as usize + 1)),
 				timer: timer.clone(),
@@ -483,7 +484,7 @@ fn threshold_plus_one_locked_on_bad_proposal() {
 		.enumerate()
 		.map(|(i, (tx, rx))| {
 			let ctx = TestContext {
-				local_id: AuthorityId(i),
+				local_id: AuthorityId(i as u64),
 				proposal: Mutex::new(i),
 				current_round: Arc::new(AtomicUsize::new(locked_round as usize + 1)),
 				timer: timer.clone(),
@@ -552,7 +553,7 @@ fn consensus_completes_even_when_nodes_start_with_a_delay() {
 		.enumerate()
 		.map(|(i, (tx, rx))| {
 			let ctx = TestContext {
-				local_id: AuthorityId(i),
+				local_id: AuthorityId(i as u64),
 				proposal: Mutex::new(i),
 				current_round: Arc::new(AtomicUsize::new(0)),
 				timer: timer.clone(),
