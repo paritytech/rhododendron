@@ -323,7 +323,7 @@ impl ::std::error::Error for InputStreamConcluded {
 
 // get the "full BFT" threshold based on an amount of nodes and
 // a maximum faulty. if nodes == 3f + 1, then threshold == 2f + 1.
-fn bft_threshold(nodes: usize, max_faulty: usize) -> usize {
+fn bft_threshold(nodes: u32, max_faulty: u32) -> u32 {
 	nodes - max_faulty
 }
 
@@ -376,8 +376,8 @@ enum LocalState {
 //     of the other authorities, and it is unlikely that we can assist in
 //     consensus meaningfully. nevertheless we make an attempt.
 struct Strategy<C: Context> {
-	nodes: usize,
-	max_faulty: usize,
+	nodes: u32,
+	max_faulty: u32,
 	fetching_proposal: Option<C::CreateProposal>,
 	evaluating_proposal: Option<C::EvaluateProposal>,
 	round_timeout: Option<future::Fuse<C::RoundTimeout>>,
@@ -392,7 +392,7 @@ struct Strategy<C: Context> {
 }
 
 impl<C: Context> Strategy<C> {
-	fn create(context: &C, nodes: usize, max_faulty: usize) -> Self {
+	fn create(context: &C, nodes: u32, max_faulty: u32) -> Self {
 		let threshold = bft_threshold(nodes, max_faulty);
 
 		let current_accumulator = Accumulator::new(
@@ -741,7 +741,7 @@ impl<C: Context> Strategy<C> {
 
 		// if we got f + 1 advance votes, or the timeout has fired, and we haven't
 		// sent an AdvanceRound message yet, do so.
-		let mut attempt_advance = self.current_accumulator.advance_votes() > self.max_faulty;
+		let mut attempt_advance = self.current_accumulator.advance_votes() > self.max_faulty as usize;
 
 		// if we evaluated the proposal and it was bad, vote to advance round.
 		if let LocalState::Prepared(false) = self.local_state {
@@ -921,7 +921,7 @@ impl<C: Context, I, O> Agreement<C, I, O> {
 /// conclude without having witnessed the conclusion.
 /// In general, this future should be pre-empted by the import of a justification
 /// set for this block height.
-pub fn agree<C: Context, I, O>(context: C, nodes: usize, max_faulty: usize, input: I, output: O)
+pub fn agree<C: Context, I, O>(context: C, nodes: u32, max_faulty: u32, input: I, output: O)
 	-> Agreement<C, I, O>
 	where
 		C: Context,

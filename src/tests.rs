@@ -38,9 +38,10 @@ struct Network<T> {
 }
 
 impl<T: Clone + Send + 'static> Network<T> {
-	fn new(nodes: usize)
+	fn new(nodes: u32)
 		-> (Self, Vec<mpsc::UnboundedSender<(usize, T)>>, Vec<mpsc::UnboundedReceiver<T>>)
 	{
+		let nodes = nodes as usize;
 		let mut inputs = Vec::with_capacity(nodes);
 		let mut outputs = Vec::with_capacity(nodes);
 		let mut endpoints = Vec::with_capacity(nodes);
@@ -93,13 +94,13 @@ impl<T: Clone> Future for Network<T> {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, Hash)]
-struct Candidate(u64);
+struct Candidate(u32);
 
 #[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, Hash)]
-struct Digest(u64);
+struct Digest(u32);
 
 #[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, Hash)]
-struct AuthorityId(u64);
+struct AuthorityId(u32);
 
 #[derive(Debug, PartialEq, Eq, Clone, Encode, Decode)]
 struct Signature(Message<Candidate, Digest>, AuthorityId);
@@ -115,11 +116,11 @@ impl From<InputStreamConcluded> for Error {
 
 struct TestContext {
 	local_id: AuthorityId,
-	proposal: Mutex<usize>,
-	node_count: usize,
+	proposal: Mutex<u32>,
+	node_count: u32,
 	current_round: Arc<AtomicUsize>,
 	timer: Timer,
-	evaluated: Mutex<BTreeSet<u64>>,
+	evaluated: Mutex<BTreeSet<u32>>,
 }
 
 impl Context for TestContext {
@@ -141,7 +142,7 @@ impl Context for TestContext {
 			let mut p = self.proposal.lock().unwrap();
 			let x = *p;
 			*p += self.node_count;
-			x as u64
+			x
 		};
 
 		Ok(Candidate(proposal)).into_future()
@@ -174,7 +175,7 @@ impl Context for TestContext {
 	}
 
 	fn round_proposer(&self, round: u32) -> AuthorityId {
-		AuthorityId((round as u64) % self.node_count as u64)
+		AuthorityId(round % self.node_count)
 	}
 
 	fn proposal_valid(&self, proposal: &Candidate) -> FutureResult<bool, Error> {
@@ -236,11 +237,12 @@ fn consensus_completes_with_minimum_good() {
 	let nodes = net_send
 		.into_iter()
 		.zip(net_recv)
-		.take(node_count - max_faulty)
+		.take((node_count - max_faulty) as usize)
 		.enumerate()
 		.map(|(i, (tx, rx))| {
+			let i = i as u32;
 			let ctx = TestContext {
-				local_id: AuthorityId(i as u64),
+				local_id: AuthorityId(i),
 				proposal: Mutex::new(i),
 				current_round: Arc::new(AtomicUsize::new(0)),
 				timer: timer.clone(),
@@ -253,7 +255,7 @@ fn consensus_completes_with_minimum_good() {
 				node_count,
 				max_faulty,
 				rx.map_err(|_| Error),
-				tx.sink_map_err(|_| Error).with(move |t| Ok((i, t))),
+				tx.sink_map_err(|_| Error).with(move |t| Ok((i as usize, t))),
 			)
 		})
 		.collect::<Vec<_>>();
@@ -286,9 +288,10 @@ fn consensus_completes_with_minimum_good_all_initial_proposals_bad() {
 	let nodes = net_send
 		.into_iter()
 		.zip(net_recv)
-		.take(node_count - max_faulty)
+		.take((node_count - max_faulty) as usize)
 		.enumerate()
 		.map(|(i, (tx, rx))| {
+			let i = i as u32;
 			// the first 5 proposals are going to be bad.
 			let proposal = if i < 5 {
 				i * 3 // proposals considered bad in the tests if they are % 3
@@ -297,7 +300,7 @@ fn consensus_completes_with_minimum_good_all_initial_proposals_bad() {
 			};
 
 			let ctx = TestContext {
-				local_id: AuthorityId(i as u64),
+				local_id: AuthorityId(i),
 				proposal: Mutex::new(proposal),
 				current_round: Arc::new(AtomicUsize::new(0)),
 				timer: timer.clone(),
@@ -310,7 +313,7 @@ fn consensus_completes_with_minimum_good_all_initial_proposals_bad() {
 				node_count,
 				max_faulty,
 				rx.map_err(|_| Error),
-				tx.sink_map_err(|_| Error).with(move |t| Ok((i, t))),
+				tx.sink_map_err(|_| Error).with(move |t| Ok((i as usize, t))),
 			)
 		})
 		.collect::<Vec<_>>();
@@ -343,11 +346,12 @@ fn consensus_does_not_complete_without_enough_nodes() {
 	let nodes = net_send
 		.into_iter()
 		.zip(net_recv)
-		.take(node_count - max_faulty - 1)
+		.take((node_count - max_faulty - 1) as usize)
 		.enumerate()
 		.map(|(i, (tx, rx))| {
+			let i = i as u32;
 			let ctx = TestContext {
-				local_id: AuthorityId(i as u64),
+				local_id: AuthorityId(i),
 				proposal: Mutex::new(i),
 				current_round: Arc::new(AtomicUsize::new(0)),
 				timer: timer.clone(),
@@ -360,7 +364,7 @@ fn consensus_does_not_complete_without_enough_nodes() {
 				node_count,
 				max_faulty,
 				rx.map_err(|_| Error),
-				tx.sink_map_err(|_| Error).with(move |t| Ok((i, t))),
+				tx.sink_map_err(|_| Error).with(move |t| Ok((i as usize, t))),
 			)
 		})
 		.collect::<Vec<_>>();
@@ -403,8 +407,9 @@ fn threshold_plus_one_locked_on_proposal_only_one_with_candidate() {
 		.zip(net_recv)
 		.enumerate()
 		.map(|(i, (tx, rx))| {
+			let i = i as u32;
 			let ctx = TestContext {
-				local_id: AuthorityId(i as u64),
+				local_id: AuthorityId(i),
 				proposal: Mutex::new(i),
 				current_round: Arc::new(AtomicUsize::new(locked_round as usize + 1)),
 				timer: timer.clone(),
@@ -416,7 +421,7 @@ fn threshold_plus_one_locked_on_proposal_only_one_with_candidate() {
 				node_count,
 				max_faulty,
 				rx.map_err(|_| Error),
-				tx.sink_map_err(|_| Error).with(move |t| Ok((i, t))),
+				tx.sink_map_err(|_| Error).with(move |t| Ok((i as usize, t))),
 			);
 
 			agreement.strategy.advance_to_round(
@@ -483,8 +488,9 @@ fn threshold_plus_one_locked_on_bad_proposal() {
 		.zip(net_recv)
 		.enumerate()
 		.map(|(i, (tx, rx))| {
+			let i = i as u32;
 			let ctx = TestContext {
-				local_id: AuthorityId(i as u64),
+				local_id: AuthorityId(i),
 				proposal: Mutex::new(i),
 				current_round: Arc::new(AtomicUsize::new(locked_round as usize + 1)),
 				timer: timer.clone(),
@@ -496,7 +502,7 @@ fn threshold_plus_one_locked_on_bad_proposal() {
 				node_count,
 				max_faulty,
 				rx.map_err(|_| Error),
-				tx.sink_map_err(|_| Error).with(move |t| Ok((i, t))),
+				tx.sink_map_err(|_| Error).with(move |t| Ok((i as usize, t))),
 			);
 
 			agreement.strategy.advance_to_round(
@@ -549,11 +555,12 @@ fn consensus_completes_even_when_nodes_start_with_a_delay() {
 	let nodes = net_send
 		.into_iter()
 		.zip(net_recv)
-		.take(node_count - max_faulty)
+		.take((node_count - max_faulty) as usize)
 		.enumerate()
 		.map(|(i, (tx, rx))| {
+			let i = i as u32;
 			let ctx = TestContext {
-				local_id: AuthorityId(i as u64),
+				local_id: AuthorityId(i),
 				proposal: Mutex::new(i),
 				current_round: Arc::new(AtomicUsize::new(0)),
 				timer: timer.clone(),
@@ -569,7 +576,7 @@ fn consensus_completes_even_when_nodes_start_with_a_delay() {
 					node_count,
 					max_faulty,
 					rx.map_err(|_| Error),
-					tx.sink_map_err(|_| Error).with(move |t| Ok((i, t))),
+					tx.sink_map_err(|_| Error).with(move |t| Ok((i as usize, t))),
 				)
 			})
 		})

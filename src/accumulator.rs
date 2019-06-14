@@ -126,8 +126,8 @@ pub enum State<Candidate, Digest, Signature> {
 #[derive(Debug, Default)]
 #[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 struct VoteCounts {
-	prepared: u64,
-	committed: u64,
+	prepared: u32,
+	committed: u32,
 }
 
 #[derive(Debug)]
@@ -169,7 +169,7 @@ pub struct Accumulator<Candidate, Digest, AuthorityId, Signature>
 	pub round_number: u32,
 
 	/// Threshold of prepare messages required to make progress
-	pub threshold: usize,
+	pub threshold: u32,
 
 	/// Current proposer/authority for this round
 	pub round_proposer: AuthorityId,
@@ -190,7 +190,7 @@ impl<Candidate, Digest, AuthorityId, Signature> Accumulator<Candidate, Digest, A
 	Signature: Eq + Clone,
 {
 	/// Create a new state accumulator.
-	pub fn new(round_number: u32, threshold: usize, round_proposer: AuthorityId) -> Self {
+	pub fn new(round_number: u32, threshold: u32, round_proposer: AuthorityId) -> Self {
 		Accumulator {
 			round_number,
 			threshold,
@@ -338,7 +338,7 @@ impl<Candidate, Digest, AuthorityId, Signature> Accumulator<Candidate, Digest, A
 				let count = self.vote_counts.entry(digest.clone()).or_insert_with(Default::default);
 				count.prepared += 1;
 
-				if count.prepared >= self.threshold as u64 {
+				if count.prepared >= self.threshold {
 					Some(digest)
 				} else {
 					None
@@ -395,7 +395,7 @@ impl<Candidate, Digest, AuthorityId, Signature> Accumulator<Candidate, Digest, A
 				let count = self.vote_counts.entry(digest.clone()).or_insert_with(Default::default);
 				count.committed += 1;
 
-				if count.committed >= self.threshold as u64 {
+				if count.committed >= self.threshold {
 					Some(digest)
 				} else {
 					None
@@ -443,7 +443,7 @@ impl<Candidate, Digest, AuthorityId, Signature> Accumulator<Candidate, Digest, A
 	) -> Result<(), Misbehavior<Digest, Signature>> {
 		self.advance_round.insert(sender);
 
-		if self.advance_round.len() < self.threshold { return Ok(()) }
+		if self.advance_round.len() < self.threshold as usize { return Ok(()) }
 		trace!(target: "bft", "Witnessed threshold advance-round messages for round {}", self.round_number);
 
 		// allow transition to new round only if we haven't produced a justification
