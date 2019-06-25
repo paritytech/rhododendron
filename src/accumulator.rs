@@ -20,7 +20,11 @@ use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
 use std::hash::Hash;
 
-use ::{Vote, LocalizedMessage, LocalizedProposal};
+use log::{debug, trace};
+#[cfg(any(test, feature="codec"))]
+use parity_codec::{Encode, Decode};
+
+use crate::{Vote, LocalizedMessage, LocalizedProposal};
 
 /// Justification for some state at a given round.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -122,8 +126,8 @@ pub enum State<Candidate, Digest, Signature> {
 #[derive(Debug, Default)]
 #[cfg_attr(any(test, feature="codec"), derive(Encode, Decode))]
 struct VoteCounts {
-	prepared: usize,
-	committed: usize,
+	prepared: u64,
+	committed: u64,
 }
 
 #[derive(Debug)]
@@ -334,7 +338,7 @@ impl<Candidate, Digest, AuthorityId, Signature> Accumulator<Candidate, Digest, A
 				let count = self.vote_counts.entry(digest.clone()).or_insert_with(Default::default);
 				count.prepared += 1;
 
-				if count.prepared >= self.threshold {
+				if count.prepared >= self.threshold as u64 {
 					Some(digest)
 				} else {
 					None
@@ -391,7 +395,7 @@ impl<Candidate, Digest, AuthorityId, Signature> Accumulator<Candidate, Digest, A
 				let count = self.vote_counts.entry(digest.clone()).or_insert_with(Default::default);
 				count.committed += 1;
 
-				if count.committed >= self.threshold {
+				if count.committed >= self.threshold as u64 {
 					Some(digest)
 				} else {
 					None
@@ -458,19 +462,19 @@ impl<Candidate, Digest, AuthorityId, Signature> Accumulator<Candidate, Digest, A
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use ::{LocalizedMessage, LocalizedProposal, LocalizedVote};
+	use crate::{LocalizedMessage, LocalizedProposal, LocalizedVote};
 
 	#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode)]
-	pub struct Candidate(usize);
+	pub struct Candidate(u64);
 
 	#[derive(Hash, PartialEq, Eq, Clone, Debug, Encode, Decode)]
-	pub struct Digest(usize);
+	pub struct Digest(u64);
 
 	#[derive(Hash, PartialEq, Eq, Debug, Encode, Decode, Clone)]
-	pub struct AuthorityId(usize);
+	pub struct AuthorityId(u64);
 
 	#[derive(PartialEq, Eq, Clone, Debug, Encode, Decode)]
-	pub struct Signature(usize, usize);
+	pub struct Signature(u64, u64);
 
 	#[test]
 	fn justification_checks_out() {
