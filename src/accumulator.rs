@@ -22,7 +22,7 @@ use std::hash::Hash;
 
 use log::{debug, trace};
 #[cfg(any(test, feature="codec"))]
-use parity_codec::{Encode, Decode};
+use parity_scale_codec::{Encode, Decode};
 
 use crate::{Vote, LocalizedMessage, LocalizedProposal};
 

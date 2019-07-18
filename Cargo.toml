@@ -11,12 +11,12 @@ edition = "2018"
 futures = "0.1.17"
 error-chain = "0.12"
 log = "0.4"
-parity-codec = { version = "4.1", optional = true, features = ["derive"] }
+parity-scale-codec = { version = "1.0.3", optional = true, features = ["derive"] }
 
 [dev-dependencies]
 tokio-core = "0.1.12"
 tokio-timer = "0.1.2"
-parity-codec = { version = "4.1", features = ["derive"] }
+parity-scale-codec = { version = "1.0.3", features = ["derive"] }
 
 [features]
-codec = ['parity-codec']
+codec = ['parity-scale-codec']
