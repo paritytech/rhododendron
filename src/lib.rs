@@ -43,7 +43,7 @@ use std::hash::Hash;
 use futures::{future, Future, Stream, Sink, Poll, Async, AsyncSink};
 use log::trace;
 #[cfg(any(test, feature="codec"))]
-use parity_codec::{Encode, Decode};
+use parity_scale_codec::{Encode, Decode};
 
 use self::accumulator::State;
 

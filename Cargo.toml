@@ -1,6 +1,6 @@
 [package]
 name = "rhododendron"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Parity Technologies <admin@parity.io>"]
 description = "Asynchronously safe BFT protocol, futures-based implementation"
 license = "GPL-3.0"
@@ -11,12 +11,12 @@ edition = "2018"
 futures = "0.1.17"
 error-chain = "0.12"
 log = "0.4"
-parity-codec = { version = "4.1", optional = true, features = ["derive"] }
+parity-scale-codec = { version = "1.0.3", optional = true, features = ["derive"] }
 
 [dev-dependencies]
 tokio-core = "0.1.12"
 tokio-timer = "0.1.2"
-parity-codec = { version = "4.1", features = ["derive"] }
+parity-scale-codec = { version = "1.0.3", features = ["derive"] }
 
 [features]
-codec = ['parity-codec']
+codec = ['parity-scale-codec']
